@@ -64,36 +64,6 @@ http://44.202.58.239:8000/health
   Pertama, buat `Dockerfile`. Pada tahap pertama, image python diinstall. Lalu, `requirements.txt` disalin kedalam container dan menginstall ke dalam `/app/deps`. Setelah itu, seluruh code app disalin ke dalam container. 
   Pada tahap kedua, hanya menyalin code app dari tahap pertama, tanpa membawa file build yang tidak diperlukan. Aplikasi dijalankan menggunakan Uvicorn pada host `0.0.0.0` dan port `8000`.
 
-  Setelah itu, lakukan docker build menggunakan command berikut:
-  
-  ```c
-  docker build -t loveuntold/ci-cd-api .
-  ```
-
-  
-
-  Lalu, push ke dockerhub.
-  ```c
-  docker push loveuntold/ci-cd-api  
-  ```
-
-  Lakukan deployment di AWS EC2.
-  
-  ![image](https://github.com/user-attachments/assets/3a865757-7b29-4e80-a804-7b690510efd9)
-
-  Akses EC2 menggunakan ssh.
-  ```c
-  ssh -i ci-cd-api-key.pem ec2-user@44.202.58.239
-  ```
-
-  Lalu, pull dan run docker.
-  ```c
-  docker pull loveuntold/ci-cd-api:latest
-  docker run -p 8000:8000 loveuntold/ci-cd-api:latest
-  ```
-
-  Jalankan pada http://44.202.58.239:8000/health.
-
 <br>
 <br>
 <br>
@@ -103,47 +73,52 @@ http://44.202.58.239:8000/health
   CI/CD pada Github Actions akan secara otomatis membangun dan melakukan deploy aplikasi FastAPI setiap kali ada push atau pull request ke branch main. 
 
   ```c
+  jobs:
   build:
-      runs-on: ubuntu-latest
-  
-      steps:
-        - name: Checkout code
-          uses: actions/checkout@v2
-  
-        - name: Build Docker image
-          run: docker build -t api .
-  
-        - name: Run tests
-          run: echo "Running tests..."
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v2
+
+      - name: Log in to Docker Hub
+        run: echo "${{ secrets.DOCKERHUB_TOKEN }}" | docker login -u "${{ secrets.DOCKERHUB_USERNAME }}" --password-stdin
+
+      - name: Build Docker image
+        run: docker build -t ${{ secrets.DOCKERHUB_USERNAME }}/ci-cd-api:latest .
+
+      - name: Push Docker image
+        run: docker push ${{ secrets.DOCKERHUB_USERNAME }}/ci-cd-api:latest
   ```
   Job ini berjalan di ubuntu-latest dan terdiri dari langkah-langkah berikut:
   1. Checkout code: Mengambil source code dari repository.
-  2. Build Docker image: Membangun image Docker dengan tag `api` dari Dockerfile.
-  3. Run tests: Output "Running tests..." menandakan sedang dijalankan.
-
+  2. Login ke docker hub 
+  3. Build Docker image: Membangun image Docker dari Dockerfile.
+  4. Push Docker image
+     
   ```c
-  deploy:
-      runs-on: ubuntu-latest
-      needs: build
-  
-      steps:
-        - name: SSH to server and deploy
-          uses: appleboy/ssh-action@master
-          with:
-            host: ${{ secrets.VPS_HOST }}
-            username: ${{ secrets.VPS_USER }}
-            key: ${{ secrets.VPS_SSH_KEY }}
-            script: |
-              echo "Deploying container from Docker Hub..."
-              docker stop api || true
-              docker rm api || true
-              docker pull loveuntold/ci-cd-api:latest
-              docker run -d -p 8000:8000 --name api loveuntold/ci-cd-api:latest
-              echo "Deployment complete."
+    deploy:
+    runs-on: ubuntu-latest
+    needs: build
+
+    steps:
+      - name: SSH to server and deploy
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ secrets.VPS_HOST }}
+          username: ${{ secrets.VPS_USER }}
+          key: ${{ secrets.VPS_SSH_KEY }}
+          script: |
+            echo "Pulling latest image..."
+            docker stop ci-cd-api || true
+            docker rm ci-cd-api || true
+            docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ci-cd-api:latest
+            docker run -d -p 8000:8000 --name ci-cd-api ${{ secrets.DOCKERHUB_USERNAME }}/ci-cd-api:latest
+            echo "Deployment complete."
   ```
   Job ini dijalankan setelah tahap build selesai. 
   1. SSH ke server VPS menggunakan credentials yang tersimpan di GitHub Secrets.
-  2. Menarik image dari Docker Hub (loveuntold/ci-cd-api:latest).
+  2. Pull image dari Docker Hub (loveuntold/ci-cd-api:latest).
   3. Jika ada container lama, maka akan dihentikan dan dihapus.
   4. Menjalankan container baru dengan port 8000.
 
@@ -151,6 +126,8 @@ http://44.202.58.239:8000/health
   - VPS_HOST: Public IP VPS.
   - VPS_USER: Username login VPS (ec2-user).
   - VPS_SSH_KEY: Private key SSH.
+  - DOCKERHUB_USERNAME: Username Docker Hub
+  - DOCKERHUB_TOKEN: Password Docker Hub
 
 <br>
 <br>
