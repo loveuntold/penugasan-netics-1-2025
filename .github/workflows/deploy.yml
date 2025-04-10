@@ -38,8 +38,8 @@ jobs:
           key: ${{ secrets.VPS_SSH_KEY }}
           script: |
             echo "Pulling latest image..."
-            docker stop api || true
-            docker rm api || true
+            docker stop ci-cd-api || true
+            docker rm ci-cd-api || true
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/ci-cd-api:latest
-            docker run -d -p 8000:8000 --name api ${{ secrets.DOCKERHUB_USERNAME }}/ci-cd-api:latest
+            docker run -d -p 8000:8000 --name ci-cd-api ${{ secrets.DOCKERHUB_USERNAME }}/ci-cd-api:latest
             echo "Deployment complete."
