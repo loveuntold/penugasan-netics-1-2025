@@ -7,7 +7,7 @@ app = FastAPI()
 @app.get("/health")
 async def health():
     return {
-        "nama": "Ayesha Nayla",
+        "nama": "Ayesha Nayla Satrio",
         "nrp": "5025231195",
         "status": "UP",
         "timestamp": datetime.now(),
