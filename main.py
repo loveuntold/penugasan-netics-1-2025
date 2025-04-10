@@ -9,6 +9,7 @@ async def health():
     return {
         "nama": "Ayesha Nayla Satrio",
         "nrp": "5025231195",
+        "prodi": "tc",
         "status": "UP",
         "timestamp": datetime.now(),
         "uptime": time()

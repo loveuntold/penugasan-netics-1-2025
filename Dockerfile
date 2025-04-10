@@ -12,4 +12,4 @@ WORKDIR /app
 COPY --from=builder /app/deps /usr/local/lib/python3.11/site-packages
 COPY --from=builder /app .
 
-CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["python", "-m", "uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8888"]
